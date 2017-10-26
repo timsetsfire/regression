@@ -1,9 +1,13 @@
+# The shell of this model was taken from statsmodels GLSAR
+# Thinking of "merging" it with statsmodels.regression.linear_model.GLSAR
+# not sure
 import statsmodels.api as sma
 from statsmodels.regression.linear_model import OLS, RegressionModel
 import numpy as np
 
-class GLSAR(RegressionModel):
+class GLSYW(RegressionModel):
     __doc__ = """
+
     A regression model with an AR(p) covariance structure.
     Implements the two-step full transform method Harvey (1981) aka Yule-Walker
     method in SAS
@@ -32,11 +36,14 @@ class GLSAR(RegressionModel):
         nobs = exog.shape[0]
         ols = OLS(endog, exog).fit()
         df_resid = exog.shape[0] - exog.shape[1] - ar
+        # compute yule walker coefficients and standard errors
         RHO = sma.regression.yule_walker(ols.resid, order=ar, inv=True, method="mle")
         yw_coef, sig, ginv = RHO
         sig *= sig ## preliminary mse
         yw_std = np.sqrt(np.diag(sig * ginv) / df_resid)
 
+        # what follows is estimation of covariance matrix used in
+        # (y - xb)^T V^{-1} (y - xb), with V equal to inverse of estimated sigma
         # http://www.stat.ufl.edu/~winner/sta6208/gls1.pdf
         P = np.linalg.cholesky(ginv).T  # contructing V
         T11 = np.sqrt(sig)*P   # constructing V
@@ -50,6 +57,7 @@ class GLSAR(RegressionModel):
         V_inv = np.linalg.pinv(V)
         sigma, cholsigmainv = sma.regression.linear_model._get_sigma(V_inv, len(endog))
 
+        # whitening matrix for the first ar observations
         self.L = (scipy.linalg.cholesky( V, lower=False)[-ar:,-ar:])[::-1,::-1]
         self.preliminary_mse = sig
 
@@ -90,7 +98,7 @@ class GLSAR(RegressionModel):
         x_first_q_obs = np.dot(self.L, X[0:self.yw_coef.shape[0]]) ## replace coef
         X = np.asarray(X, np.float64)
         _X = X.copy()
-        #the following loops over the first axis,  works for 1d and nd
+        # the following loops over the first axis,  works for 1d and nd
         # whitens remaining n - ar observations
         for i in range(self.yw_coef.shape[0]):
             _X[(i+1):] = _X[(i+1):] - self.yw_coef[i] * X[0:-(i+1)]
