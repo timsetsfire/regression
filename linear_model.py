@@ -42,16 +42,17 @@ class GLSYW(RegressionModel):
         ols = OLS(endog, exog).fit()
         df_resid = exog.shape[0] - exog.shape[1] - ar
         # compute yule walker coefficients and standard errors
-        RHO = sma.regression.yule_walker(ols.resid, order=ar, inv=True, method="mle")
-        yw_coef, sig, ginv = RHO
-        sig *= sig ## preliminary mse
-        yw_std = np.sqrt(np.diag(sig * ginv) / df_resid)
-
+        yw_coef,sig,ginv = sma.regression.yule_walker(
+                                              ols.resid,
+                                              order=ar,
+                                              inv=True,
+                                              method="mle")
+        yw_std = np.sqrt(np.diag(sig**2 * ginv) / df_resid)
         # what follows is estimation of covariance matrix used in
         # (y - xb)^T V^{-1} (y - xb), with V equal to inverse of estimated sigma
         # http://www.stat.ufl.edu/~winner/sta6208/gls1.pdf
         P = np.linalg.cholesky(ginv).T  # contructing V
-        T11 = np.sqrt(sig)*P   # constructing V
+        T11 = sig*P   # constructing V
         T12 = np.zeros([ar, nobs - ar])  # constructing V
         rho_reversed = np.append(-yw_coef[::-1], 1) # constructing V
         T2 = np.zeros([nobs - ar, nobs])# constructing V
@@ -64,8 +65,7 @@ class GLSYW(RegressionModel):
 
         # whitening matrix for the first ar observations
         self.L = (scipy.linalg.cholesky( V, lower=False)[-ar:,-ar:])[::-1,::-1]
-        self.preliminary_mse = sig
-
+        self.preliminary_mse = sig*sig
         self.yw_coef = yw_coef
         self.yw_std = yw_std
         super(GLSYW, self).__init__(endog, exog, missing=missing,
