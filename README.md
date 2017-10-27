@@ -15,7 +15,7 @@ This regression will perform the two-step full transform method to estimate the 
 and standard errors (same as SAS PROC AUTOREG setting method=YW)
 
 ~~~
-from tsf.regression.linear_model import GLSYW
+from regression.linear_model import GLSYW
 model = GLSYW(endog = y, exog = sma.add_constant(x), ar=1)
 fit = model.fit()
 fit.summary()
