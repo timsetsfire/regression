@@ -7,6 +7,7 @@ import statsmodels.base.wrapper as wrap
 import statsmodels.api as sma
 
 from statsmodels.regression.linear_model import OLS, RegressionModel
+from statsmodels.iolib.table import SimpleTable
 import scipy
 import numpy as np
 
@@ -68,6 +69,7 @@ class GLSYW(RegressionModel):
         self.preliminary_mse = sig*sig
         self.yw_coef = yw_coef
         self.yw_std = yw_std
+        self.ar = ar
         super(GLSYW, self).__init__(endog, exog, missing=missing,
                                   hasconst=hasconst, sigma=sigma,
                                   cholsigmainv=cholsigmainv, **kwargs)
@@ -80,7 +82,48 @@ class GLSYW(RegressionModel):
 
 
         self._data_attr.extend(['sigma', 'cholsigmainv', 'ar', 'L', 'yw_coef'])
+        
+    def acorr_estimates(self):
+        """
+        Printing the AR coefficient terms to match sas output
+        """
+        # autoCovDf = pd.DataFrame(np.round(self.estimated_acov,8),
+        #              columns=['Covariance'], index=range(1,len(self.estimated_acov)+1))
+        # autoCorrDf = pd.DataFrame(np.round(self.estimated_acorr,8),
+        #                      columns=['Correlation'], index=range(1,len(self.estimated_acorr)+1))
+        # out = pd.concat([autoCovDf, autoCorrDf], axis=1, join='outer'); out.index.name = 'Lag'
 
+        pic = []
+        for i in self.estimated_acorr:
+            if(i == 1):
+                pic.append(" "*20 + "|"+ "*" * 20 )
+            elif(i < 0):
+                temp = int(np.abs(np.round(i*20,0)))
+                pic.append(' '*(20 - temp) + '*' * temp +"|"+ " "*20)
+                #print( ' '*(20 - temp) + '*' * temp)
+            else:
+                temp = int(np.abs(np.round(i*20,0)))
+                pic.append(' '*20 +"|"+ '*'*temp + " "*(20 - temp))
+
+        data = list(zip( np.arange(0, self.ar+1), self.estimated_acov, self.estimated_acorr, pic))
+        tbl = SimpleTable(data, ["Lag", "Autocovariance", "Autocorrelation", "-1"+" "*18 + "0" + " "*19 + "1"], title="Estimates of Autocorrelations")
+
+        return tbl
+
+    def ar_params(self):
+        """
+        Printing the AR coefficient terms.
+        """
+        # ywcDF = pd.DataFrame(np.round(self.yw_coef,4),
+        #              columns=['Coefficient'], index=range(1,len(self.yw_coef)+1))
+        # ywsDF = pd.DataFrame(np.round(self.yw_std,4),
+        #                      columns=['Std Err'], index=range(1,len(self.yw_coef)+1))
+        # ywtvDF = pd.DataFrame(np.round(ywcDF.values/ywsDF.values,4)
+        #                       , columns=['t Value'], index=range(1,len(self.yw_coef)+1))
+        # ywAll = pd.concat([ywcDF, ywsDF, ywtvDF], axis=1, join='outer'); ywAll.index.name = 'Lag'
+        data = list( zip( np.arange(1, self.ar+1), self.yw_coef, self.yw_std, self.yw_coef / self.yw_std))
+        tbl = SimpleTable(data, ["Lag", "Coefficient", "Standard Error", "t Value"], title = "Estimates of Autoregressive Parameters")
+        return tbl
 
     def whiten(self, X):
         """
