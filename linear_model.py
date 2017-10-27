@@ -1,8 +1,13 @@
 # The shell of this model was taken from statsmodels GLSAR
 # Thinking of "merging" it with statsmodels.regression.linear_model.GLSAR
 # not sure
+# have not verified DW stat and omnimbus stat
+import statsmodels.base.model as base
+import statsmodels.base.wrapper as wrap
 import statsmodels.api as sma
+
 from statsmodels.regression.linear_model import OLS, RegressionModel
+import scipy
 import numpy as np
 
 class GLSYW(RegressionModel):
@@ -63,13 +68,13 @@ class GLSYW(RegressionModel):
 
         self.yw_coef = yw_coef
         self.yw_std = yw_std
-        super(GLSAR, self).__init__(endog, exog, missing=missing,
+        super(GLSYW, self).__init__(endog, exog, missing=missing,
                                   hasconst=hasconst, sigma=sigma,
                                   cholsigmainv=cholsigmainv, **kwargs)
 
         self.df_resid = df_resid
         self.df_model = self.nobs - self.df_resid
-        self.estimated_acorr = acf(ols.resid, unbiased = False, nlags=ar+1,
+        self.estimated_acorr = sma.tsa.acf(ols.resid, unbiased = False, nlags=ar+1,
                                    qstat=False,fft=False,alpha=None,missing='none')
         self.estimated_acov = self.estimated_acorr * np.linalg.pinv(ginv)[0][0]
 
