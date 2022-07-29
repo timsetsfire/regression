@@ -76,7 +76,7 @@ class GLSYW(RegressionModel):
 
         self.df_resid = df_resid
         self.df_model = self.nobs - self.df_resid
-        self.estimated_acorr = sma.tsa.acf(ols.resid, unbiased = False, nlags=ar+1,
+        self.estimated_acorr = sma.tsa.acf(ols.resid, adjusted = False, nlags=ar+1,
                                    qstat=False,fft=False,alpha=None,missing='none')
         self.estimated_acov = self.estimated_acorr * np.linalg.pinv(ginv)[0][0]
 
